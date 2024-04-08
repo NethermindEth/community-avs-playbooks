@@ -1,0 +1,24 @@
+all:
+  children:
+    holesky:
+      children:
+        operator_1_holesky:
+          hosts:
+            host_1:
+              ansible_host: 127.0.0.1
+              ansible_user: ubuntu
+
+        operator_2_holesky:
+          hosts:
+            host_2:
+              ansible_host: 127.0.0.1
+              ansible_user: root
+    
+    mainnet:
+      children:
+        operator_1_mainnet:
+          hosts:
+            host_3:
+              ansible_host: 127.0.0.1
+              ansible_user: ubuntu
+
