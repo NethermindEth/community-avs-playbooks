@@ -53,7 +53,6 @@
           with_items:
             - "export GOROOT={{ golang_install_dir }}"
             - "export PATH=$PATH:{{ golang_install_dir }}/bin"
-          notify: Source env vars
 
         - name: Remove the Golang tarball
           ansible.builtin.file:

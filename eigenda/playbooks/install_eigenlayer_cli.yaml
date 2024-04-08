@@ -1,0 +1,37 @@
+---
+- import_playbook: install_golang.yaml
+- name: Install Eigenlayer CLI
+  hosts: all
+  tasks:
+      # We are installing the Eigenlayer CLI from the source code for now. Uncomment the following
+      # lines to install the Eigenlayer CLI using the install script (you have to comment the rest
+      # the tasks).
+
+      # - name: Get eigenlayer-cli install script
+      #   ansible.builtin.get_url:
+      #     url: https://raw.githubusercontent.com/layr-labs/eigenlayer-cli/master/scripts/install.sh
+      #     dest: "{{ ansible_env.PWD }}/install.sh"
+      #     mode: '0755'
+
+      # - name: Execute the installation script
+      #   ansible.builtin.command:
+      #     cmd: sh "{{ ansible_env.PWD }}/install.sh" -b /usr/local/bin
+      #   become: yes
+
+    - name: Clone eigenlayer-cli # This may not be doing nothing if the repo is already cloned which is not intended
+      ansible.builtin.git:
+        repo: https://github.com/Layr-Labs/eigenlayer-cli.git
+        dest: "{{ ansible_env.HOME }}/eigenlayer-cli"
+
+    - name: Get user HOME directory
+      ansible.builtin.set_fact:
+        home_dir: "{{ ansible_env.HOME }}"
+
+    - name: Build binary
+      ansible.builtin.shell: |
+        cd "{{ home_dir }}/eigenlayer-cli"
+        source /etc/profile.d/golang.sh && go build -o eigenlayer ./cmd/eigenlayer
+        cp eigenlayer /usr/local/bin
+      args:
+        executable: /bin/bash
+      become: true

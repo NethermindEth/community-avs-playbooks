@@ -1,0 +1,25 @@
+---
+- name: Check operator registration status
+  hosts: all
+  tasks:
+    - name: Check eigenlayer command availability
+      ansible.builtin.command: which eigenlayer
+      register: eigenlayer_check
+
+    - name: Check if registration directory exists
+      ansible.builtin.stat:
+        path: ${HOME}/registration
+      register: registration_dir
+
+    - name: Check operator status
+      when: eigenlayer_check.rc == 0 and registration_dir.stat.exists
+      block:
+        - name: Check operator status
+          ansible.builtin.command: eigenlayer operator status operator.yaml
+          args:
+            chdir: ~/registration
+          register: operator_status
+
+        - name: Show operator status
+          ansible.builtin.debug:
+            msg: "{{ operator_status.stdout }}"

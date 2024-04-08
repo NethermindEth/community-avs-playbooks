@@ -1,5 +1,5 @@
 ---
-- import_playbook: install_golang.yaml
+- import_playbook: install_eigenlayer_cli.yaml
 - name: EigenDA Operator Registration Play
   hosts: all
   tasks:
@@ -38,24 +38,18 @@
             executable: /bin/bash
           become: true
 
+    - name: Remove existing registration directory if it exists
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/registration"
+        state: absent
+
     - name: Set up registration directory
       ansible.builtin.file:
         path: "{{ ansible_env.HOME }}/registration"
         state: directory
         mode: '0755'
 
-    - name: Check if metadata.json exist
-      ansible.builtin.stat:
-        path: "{{ ansible_env.HOME }}/registration/metadata.json"
-      register: metadata_stat
-
-    - name: Check if operator.yaml exists
-      ansible.builtin.stat:
-        path: "{{ ansible_env.HOME }}/registration/operator.yaml"
-      register: operator_stat
-
     - name: Generate operator config files
-      when: not metadata_stat.stat.exists and not operator_stat.stat.exists
       block:
         - name: Generate config files using eigenlayer CLI
           ansible.builtin.command:
@@ -73,7 +67,6 @@
     # This new operator.yaml is used to update the operator.yaml file in the target host generated
     # with the new version of the Eigenlayer CLI.
     - name: Update operator file
-      when: not operator_stat.stat.exists
       block:
         - name: Fetch the operator file from the target host
           ansible.builtin.fetch:
@@ -91,6 +84,7 @@
             src: "../templates/operator.yaml.j2"
             dest: "data/tmp/{{ group_names[0] }}/template-operator.yaml"
             mode: '0644'
+          delegate_to: localhost
 
         - name: Update the operator file
           ansible.builtin.script:
