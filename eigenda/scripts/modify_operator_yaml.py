@@ -9,7 +9,7 @@ group_name = sys.argv[2]
 keys_dir = sys.argv[3]
 
 # Define the path to the template operator YAML file
-template_operator_yaml_path = os.path.join('..', 'data', 'tmp', group_name, 'template-operator.yaml')
+template_operator_yaml_path = os.path.join('data', 'tmp', group_name, 'template-operator.yaml')
 
 remote_operator_yaml, template_operator_yaml = None, None
 # Load the remote operator YAML file
