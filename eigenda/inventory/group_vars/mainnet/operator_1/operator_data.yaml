@@ -6,7 +6,7 @@ el_delegation_manager_address: "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A"
 eth_rpc_url: "https://your-rpc-endpoint.avs.com"
 private_key_store_path: "~/.eigenlayer/operator_keys/operator.ecdsa.key.json"
 signer_type: local_keystore
-chain_id: 17000
+chain_id: 1 
 
 # ------------- Monitoring variables ------------- 
 monitoring_endpoint: https://eigenda-monitoring.operator.io
