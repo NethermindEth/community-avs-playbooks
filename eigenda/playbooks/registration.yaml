@@ -1,0 +1,123 @@
+---
+- import_playbook: install_golang.yaml
+- name: EigenDA Operator Registration Play
+  hosts: all
+  tasks:
+    - name: Install eigenlayer-cli
+      block:
+        # We are installing the Eigenlayer CLI from the source code for now. Uncomment the following
+        # lines to install the Eigenlayer CLI using the install script (you have to comment the rest
+        # the tasks).
+
+        # - name: Get eigenlayer-cli install script
+        #   ansible.builtin.get_url:
+        #     url: https://raw.githubusercontent.com/layr-labs/eigenlayer-cli/master/scripts/install.sh
+        #     dest: "{{ ansible_env.PWD }}/install.sh"
+        #     mode: '0755'
+
+        # - name: Execute the installation script
+        #   ansible.builtin.command:
+        #     cmd: sh "{{ ansible_env.PWD }}/install.sh" -b /usr/local/bin
+        #   become: yes
+
+        - name: Clone eigenlayer-cli # This may not be doing nothing if the repo is already cloned which is not intended
+          ansible.builtin.git:
+            repo: https://github.com/Layr-Labs/eigenlayer-cli.git
+            dest: "{{ ansible_env.HOME }}/eigenlayer-cli"
+
+        - name: Get user HOME directory
+          ansible.builtin.set_fact:
+            home_dir: "{{ ansible_env.HOME }}"
+          
+        - name: Build binary
+          ansible.builtin.shell: |
+            cd "{{ home_dir }}/eigenlayer-cli"
+            source /etc/profile.d/golang.sh && go build -o eigenlayer ./cmd/eigenlayer
+            cp eigenlayer /usr/local/bin
+          args:
+            executable: /bin/bash
+          become: true
+
+    - name: Set up registration directory
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/registration"
+        state: directory
+        mode: '0755'
+
+    - name: Check if metadata.json exist
+      ansible.builtin.stat:
+        path: "{{ ansible_env.HOME }}/registration/metadata.json"
+      register: metadata_stat
+
+    - name: Check if operator.yaml exists
+      ansible.builtin.stat:
+        path: "{{ ansible_env.HOME }}/registration/operator.yaml"
+      register: operator_stat
+
+    - name: Generate operator config files
+      when: not metadata_stat.stat.exists and not operator_stat.stat.exists
+      block:
+        - name: Generate config files using eigenlayer CLI
+          ansible.builtin.command:
+            cmd: eigenlayer operator config create --yes
+          args:
+            chdir: "{{ ansible_env.HOME }}/registration"
+          register: config_create
+
+        - name: Show config create output
+          ansible.builtin.debug:
+            msg: "{{ config_create.stdout }}"
+
+    # As the operator.yaml could face changes between Eigenlayer CLI versions, we save the values
+    # as variables and generate a new operator.yaml file based on the template and the variables.
+    # This new operator.yaml is used to update the operator.yaml file in the target host generated
+    # with the new version of the Eigenlayer CLI.
+    - name: Update operator file
+      when: not operator_stat.stat.exists
+      block:
+        - name: Fetch the operator file from the target host
+          ansible.builtin.fetch:
+            src: "{{ ansible_env.HOME }}/registration/operator.yaml"
+            dest: "data/tmp/{{ group_names[0] }}/operator.yaml"
+            flat: true
+
+        - name: Install PyYAML
+          ansible.builtin.command:
+            cmd: pip install -r ../scripts/requirements.txt
+          delegate_to: localhost
+
+        - name: Generate template operator file
+          ansible.builtin.template:
+            src: "../templates/operator.yaml.j2"
+            dest: "data/tmp/{{ group_names[0] }}/template-operator.yaml"
+            mode: '0644'
+
+        - name: Update the operator file
+          ansible.builtin.script:
+            cmd: ../scripts/modify_operator_yaml.py data/tmp/"{{ group_names[0] }}"/operator.yaml "{{ group_names[0] }}" "{{ ansible_env.HOME }}"
+          delegate_to: localhost
+          register: operator_update
+
+        - name: Show operator update output
+          ansible.builtin.debug:
+            msg: "{{ operator_update.stdout }}"
+
+        - name: Copy the updated operator file back to the target host
+          ansible.builtin.copy:
+            src: "data/tmp/{{ group_names[0] }}/operator.yaml"
+            dest: "{{ ansible_env.HOME }}/registration/operator.yaml"
+            mode: '0644'
+
+    # Assumes the metadata.json and logo.png files are already in a proper Github repository
+    # and whose URL is provided in the metadata_url variable.
+    - name: Register the operator
+      block:
+        - name: Register the operator
+          ansible.builtin.shell: >
+            echo '{{ lookup('env', 'KEY_PASSWORD_' + group_names[0]) }}' |
+            eigenlayer operator register {{ ansible_env.HOME }}/registration/operator.yaml
+          register: operator_register
+
+        - name: Show registration output
+          ansible.builtin.debug:
+            msg: "{{ operator_register.stdout }}"

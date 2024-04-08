@@ -1,0 +1,62 @@
+---
+- name: Install Golang
+  hosts: all
+  become: true
+  vars:
+    golang_version: "1.22.1"  # Specify the Golang version here
+    golang_download_url: "https://go.dev/dl/go{{ golang_version }}.linux-amd64.tar.gz"
+    golang_install_dir: "/usr/local/go"
+
+  tasks:
+    - name: Check if Golang is already installed
+      ansible.builtin.shell: |
+        source /etc/profile.d/golang.sh && go version
+      args:
+        executable: /bin/bash
+      register: golang_installed
+      ignore_errors: true
+      become: false
+
+    - name: Install Golang
+      when: golang_installed is failed
+      block:
+        - name: Remove any existing Golang installation
+          ansible.builtin.file:
+            path: "{{ golang_install_dir }}"
+            state: absent
+
+        - name: Download Golang tarball
+          ansible.builtin.get_url:
+            url: "{{ golang_download_url }}"
+            dest: "/tmp/go{{ golang_version }}.linux-amd64.tar.gz"
+            timeout: 60
+
+        - name: Ensure Golang installation directory exists
+          ansible.builtin.file:
+            path: "{{ golang_install_dir }}"
+            state: directory
+            mode: '0755'
+
+        - name: Extract Golang tarball
+          ansible.builtin.unarchive:
+            src: "/tmp/go{{ golang_version }}.linux-amd64.tar.gz"
+            dest: "{{ golang_install_dir }}"
+            remote_src: true
+            extra_opts: [--strip-components=1]
+            creates: "{{ golang_install_dir }}/bin/go"
+
+        - name: Set Golang environment variables
+          ansible.builtin.lineinfile:
+            path: "/etc/profile.d/golang.sh"
+            line: "{{ item }}"
+            create: yes
+          with_items:
+            - "export GOROOT={{ golang_install_dir }}"
+            - "export PATH=$PATH:{{ golang_install_dir }}/bin"
+          notify: Source env vars
+
+        - name: Remove the Golang tarball
+          ansible.builtin.file:
+            path: "/tmp/go{{ golang_version }}.linux-amd64.tar.gz"
+            state: absent
+

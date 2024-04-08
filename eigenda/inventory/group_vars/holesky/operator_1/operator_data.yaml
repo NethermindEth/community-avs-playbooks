@@ -1,0 +1,22 @@
+# ------------- Registration variables -----------
+operator_address: "0x0000000000000000000000000000000000000000"
+earnings_receiver_address: "0x0000000000000000000000000000000000000000"
+metadata_url: "https://raw.githubusercontent.com/Layr-Labs/eigendata/main/operator/metadata.json"
+el_delegation_manager_address: "0xA44151489861Fe9e3055d95adC98FbD462B948e7"
+eth_rpc_url: "https://your-rpc-endpoint.avs.com"
+private_key_store_path: "~/.eigenlayer/operator_keys/operator.ecdsa.key.json"
+signer_type: local_keystore
+chain_id: 17000
+
+# ------------- Monitoring variables ------------- 
+monitoring_endpoint: https://eigenda-monitoring.operator.io
+monitoring_user: operator
+monitoring_encoded_password: your_hashed_password_check_readme
+
+# ------------- Eigenda variables -------------
+user_home: "/home/<user>"
+node_ecdsa_key_file_host: "${EIGENLAYER_HOME}/operator_keys/operator.ecdsa.key.json"
+node_bls_key_file_host: "${EIGENLAYER_HOME}/operator_keys/operator.bls.key.json"
+quorum_id_list: "0"
+node_chain_rpc: "https://your-rpc-endpoint.avs.com" 
+main_service_image: "ghcr.io/layr-labs/eigenda/opr-node:release-0.6.0"
